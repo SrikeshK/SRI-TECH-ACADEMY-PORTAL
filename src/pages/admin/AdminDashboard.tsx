@@ -959,16 +959,6 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                   <span className="text-sm font-display font-black text-red-400 tabular-nums">{studentsBelow50}</span>
                 </div>
-                <div className="flex items-center justify-between px-3 py-2.5 rounded-lg"
-                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400 opacity-50" />
-                    <span className="text-[10px] font-display font-semibold text-slate-400 uppercase tracking-wide">Modules Done</span>
-                  </div>
-                  <span className="text-sm font-display font-black text-slate-300 tabular-nums">
-                    {academyProgress.completedModules}/{academyProgress.totalModules}
-                  </span>
-                </div>
               </div>
             </div>
           </GlassCard>

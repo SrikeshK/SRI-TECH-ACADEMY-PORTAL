@@ -206,10 +206,7 @@ const AdminStudents: React.FC = () => {
           }
         );
 
-        // NOTE: createStudentAccount signs out the admin after creating the student
-        // so the admin will be redirected to login. This is a known limitation of
-        // using a single Firebase Auth instance. The admin must log in again.
-        showToast('Student account created successfully! Please log in again to continue.', 'success');
+        showToast('Student account created successfully!', 'success');
 
       } else if (modalMode === 'edit' && selectedStudent) {
         // Normalize: form may submit enrolledCourses; Student type uses courseIds as primary

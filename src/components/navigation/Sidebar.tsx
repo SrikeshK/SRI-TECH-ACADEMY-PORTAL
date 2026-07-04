@@ -131,7 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-display font-semibold text-white truncate leading-snug">{user?.name ?? 'User'}</span>
             <span className="text-[10px] text-slate-400 truncate leading-none">
-              {user?.role === 'admin' ? user?.email : `ID: ${user?.studentId ?? '—'}`}
+              {user?.email ?? (user?.role === 'student' ? 'Student' : 'User')}
             </span>
           </div>
         </div>

@@ -13,6 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
+import { deleteApp, initializeApp } from 'firebase/app';
 import {
   signInWithEmailAndPassword,
   signOut,
@@ -22,6 +23,7 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
   User,
+  getAuth,
 } from 'firebase/auth';
 import {
   doc,
@@ -30,7 +32,7 @@ import {
   updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { auth, db, firebaseConfig } from '../firebase/config';
 import { UserProfile } from '../types';
 
 // ─── Firestore Collection Name ───────────────────────────────
@@ -239,38 +241,25 @@ export async function createStudentAccount(
     throw new Error('You must be signed in as an administrator to create student accounts.');
   }
 
-  // Step 1 – Create the Firebase Auth account for the student.
-  // NOTE: Firebase automatically switches the active session to the new user.
+  // Step 1 – Create the Firebase Auth account for the student using a secondary Firebase App.
+  // This prevents the admin on the primary app from being signed out.
+  const tempAppName = `TempApp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const secondaryApp = initializeApp(firebaseConfig, tempAppName);
+  const secondaryAuth = getAuth(secondaryApp);
+
   let studentCredential;
   try {
-    studentCredential = await createUserWithEmailAndPassword(auth, email, password);
+    studentCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
   } catch (err) {
+    await deleteApp(secondaryApp).catch(() => {});
     throw new Error(getFirebaseErrorMessage(err));
   }
 
   const uid = studentCredential.user.uid;
 
-  // Step 2 – Sign back in as the admin immediately so the admin session
-  // is restored before any Firestore writes (which need admin auth).
-  // We do NOT store the admin password – instead we use the existing token.
-  // The cleanest way: sign the NEW user out and restore the admin token.
-  // Since we are inside the same tab, we sign out and re-login is not possible
-  // without the password. Instead, we write Firestore docs using the student's
-  // short-lived session (it was just created, token is valid).
-  // Then we sign the admin back in via page reload or the admin stores the session.
-  //
-  // *** Production-safe approach: ***
-  // Write all Firestore documents NOW (while student is signed in).
-  // Then sign out the student and sign the admin back in using onAuthStateChanged
-  // which will restore the admin's cached credential if they have a valid token.
-  // In practice, Firebase Auth's token cache keeps the admin token valid and
-  // onAuthStateChanged re-resolves after the explicit signIn call below.
-
   const courseIds = studentData.courseIds?.length
     ? studentData.courseIds
     : (studentData.enrolledCourses ?? []);
-
-  const now = new Date().toISOString();
 
   // Step 3 – Create the students/{uid} document in Firestore.
   const studentDocData = {
@@ -293,6 +282,7 @@ export async function createStudentAccount(
   } catch (firestoreErr) {
     // Firestore write failed – clean up by deleting the Auth account
     await studentCredential.user.delete().catch(() => {});
+    await deleteApp(secondaryApp).catch(() => {});
     throw new Error('Failed to create student profile in database. Account creation rolled back.');
   }
 
@@ -313,16 +303,17 @@ export async function createStudentAccount(
   } catch (profileErr) {
     // users doc write failed – attempt cleanup
     await studentCredential.user.delete().catch(() => {});
+    await deleteApp(secondaryApp).catch(() => {});
     throw new Error('Failed to create user profile. Account creation rolled back.');
   }
 
-  // Step 5 – Sign the student out so the admin session is restored.
-  // Firebase Auth's onAuthStateChanged will NOT fire for the admin again unless
-  // we explicitly sign in. Since we cannot re-authenticate the admin without
-  // their password, we sign out and let the UI redirect to login.
-  // A better UX: use a secondary Firebase App instance (out of scope here).
-  // For now: sign the student out — admin will be prompted to log in again.
-  await signOut(auth);
+  // Step 5 – Clean up the secondary Firebase App
+  try {
+    await signOut(secondaryAuth);
+    await deleteApp(secondaryApp);
+  } catch (cleanErr) {
+    console.error('Cleanup of secondary Firebase app failed:', cleanErr);
+  }
 
   return { uid, studentDocId: uid };
 }

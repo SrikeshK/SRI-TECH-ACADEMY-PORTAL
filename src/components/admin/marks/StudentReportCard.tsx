@@ -81,7 +81,7 @@ export const StudentReportCard: React.FC<StudentReportCardProps> = ({ report }) 
           </div>
 
           <div className="flex flex-col items-center md:items-end gap-2 shrink-0">
-            <Badge color={isPassed ? 'success' : 'error'} variant="solid" className="px-4 py-1 font-bold text-sm tracking-wider uppercase">
+            <Badge color={status === 'Pass' ? 'success' : status === 'Pending' ? 'warning' : 'error'} variant="solid" className="px-4 py-1 font-bold text-sm tracking-wider uppercase">
               {status}
             </Badge>
             <span className="text-[10px] text-slate-500 font-mono">Date Generated: {new Date().toLocaleDateString()}</span>

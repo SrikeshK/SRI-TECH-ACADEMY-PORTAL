@@ -33,7 +33,7 @@ class MarksCalculationService {
     return Math.round(avg * 10) / 10; // 1 decimal place
   }
 
-  calculateOverallAverage(marksList: Mark[]): number {
+  calculateOverallAverage(marksList: { theoryMarks?: number; practicalMarks?: number }[]): number {
     if (!marksList || marksList.length === 0) return 0;
     
     let sum = 0;

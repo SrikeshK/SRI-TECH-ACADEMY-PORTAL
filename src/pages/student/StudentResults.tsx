@@ -140,7 +140,6 @@ export const StudentResults: React.FC = () => {
                     <tr className="border-b border-white/5 bg-white/2">
                       <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-wider text-slate-400">Course Syllabus</th>
                       <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-wider text-slate-400">Subject Topic</th>
-                      <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-wider text-slate-400">Exam Assessment Name</th>
                       <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-wider text-slate-400">Marks Secured</th>
                       <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-wider text-slate-400 text-center">Subject Average</th>
                       <th className="px-6 py-4 text-xs font-display font-bold uppercase tracking-wider text-slate-400 text-center">Evaluation Grade</th>
@@ -156,7 +155,6 @@ export const StudentResults: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4"><span className="text-xs text-slate-400">Theory &amp; Practical</span></td>
-                        <td className="px-6 py-4"><span className="text-xs text-slate-400 font-medium">{row.isGraded ? "Term End Exam" : "---"}</span></td>
                         <td className="px-6 py-4 font-mono">
                           {row.isGraded ? (
                             <span className="text-xs text-slate-200">T: {row.theoryMarks} | P: {row.practicalMarks}</span>

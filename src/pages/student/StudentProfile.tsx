@@ -128,9 +128,9 @@ export const StudentProfile: React.FC = () => {
 
   // Metrics states
   const [enrolledCoursesCount, setEnrolledCoursesCount] = useState(0);
-  const [attendancePercent, setAttendancePercent] = useState(95);
-  const [certificatesEarned, setCertificatesEarned] = useState(2);
-  const [courseCompletionPercent, setCourseCompletionPercent] = useState(80);
+  const [attendancePercent, setAttendancePercent] = useState(0);
+  const [certificatesEarned, setCertificatesEarned] = useState(0);
+  const [courseCompletionPercent, setCourseCompletionPercent] = useState(0);
 
   // Internal state for computation
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>([]);
@@ -189,7 +189,7 @@ export const StudentProfile: React.FC = () => {
     const unsubAttendance = subscribeToStudentAttendance(user.studentId, (records) => {
       const totalClasses = records.length;
       const attended = records.filter(r => r.status === 'Present' || r.status === 'Late').length;
-      setAttendancePercent(totalClasses > 0 ? Math.round((attended / totalClasses) * 100) : 95);
+      setAttendancePercent(totalClasses > 0 ? Math.round((attended / totalClasses) * 100) : 0);
       readyFlags.attendance = true;
       checkAllReady();
     });

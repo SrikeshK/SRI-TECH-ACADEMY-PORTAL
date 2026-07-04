@@ -63,7 +63,7 @@ export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [studentCourses, setStudentCourses] = useState<Course[]>([]);
-  const [attendancePercent, setAttendancePercent] = useState(100);
+  const [attendancePercent, setAttendancePercent] = useState(0);
   const [certificatesEarned, setCertificatesEarned] = useState(0);
   const [completedModules, setCompletedModules] = useState(0);
   const [pendingModules, setPendingModules] = useState(0);
@@ -133,7 +133,7 @@ export const StudentDashboard: React.FC = () => {
     const unsubAttendance = subscribeToStudentAttendance(user.studentId, (records) => {
       const totalClasses = records.length;
       const attended = records.filter(r => r.status === 'Present' || r.status === 'Late').length;
-      setAttendancePercent(totalClasses > 0 ? Math.round((attended / totalClasses) * 100) : 100);
+      setAttendancePercent(totalClasses > 0 ? Math.round((attended / totalClasses) * 100) : 0);
       readyFlags.attendance = true;
       checkAllReady();
     });

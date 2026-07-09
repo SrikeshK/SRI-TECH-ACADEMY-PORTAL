@@ -235,7 +235,7 @@ export const StudentDashboard: React.FC = () => {
             <span className="text-2xl font-display font-extrabold text-white mt-0.5">
               <CountUp end={completedModules} />
             </span>
-            <span className="text-[9px] text-slate-500 mt-0.5">Approved by instructor</span>
+            <span className="text-[9px] text-slate-500 mt-0.5">Modules verified</span>
           </div>
         </GlassCard>
 
@@ -325,17 +325,6 @@ export const StudentDashboard: React.FC = () => {
                       </Badge>
                     </div>
 
-                    {/* Instructor / Duration details */}
-                    <div className="flex items-center gap-4 text-[10px] text-slate-400 font-sans">
-                      <div>
-                        <span className="text-slate-500">Instructor:</span> <span className="text-slate-300 font-semibold">{course.instructor || 'Academy Faculty'}</span>
-                      </div>
-                      <div className="h-3 w-px bg-white/10" />
-                      <div>
-                        <span className="text-slate-500">Duration:</span> <span className="text-slate-300 font-semibold">{course.duration || 'N/A'}</span>
-                      </div>
-                    </div>
-
                     {/* Progress details */}
                     <div className="flex flex-col gap-1.5 mt-2">
                       <div className="flex justify-between items-center text-xs">
@@ -363,7 +352,7 @@ export const StudentDashboard: React.FC = () => {
 
                   {totalCount === 0 && (
                     <div className="mt-4 p-3 rounded-xl bg-white/2 border border-white/5 text-[10px] text-slate-500 italic text-center font-sans">
-                      Modules will appear once your instructor publishes the syllabus.
+                      Modules will appear once the syllabus is published.
                     </div>
                   )}
                 </GlassCard>

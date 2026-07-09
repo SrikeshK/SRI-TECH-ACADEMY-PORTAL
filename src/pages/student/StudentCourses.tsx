@@ -147,10 +147,6 @@ export const StudentCourses: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="flex flex-col text-right">
-                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Instructor</span>
-                      <span className="text-xs text-slate-300 font-medium">{course.instructor}</span>
-                    </div>
                     <button
                       onClick={() => toggleCourse(course.id)}
                       className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-slate-400 hover:text-white"

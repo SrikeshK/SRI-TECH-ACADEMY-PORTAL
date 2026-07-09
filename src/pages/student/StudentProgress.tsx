@@ -111,7 +111,7 @@ export const StudentProgress: React.FC = () => {
           Course Syllabus Completion
         </h2>
         <p className="text-xs text-slate-400 font-sans">
-          View your course module status and checkmark completions. Only instructors are authorized to update syllabus progress.
+          View your course module status and checkmark completions. Syllabus progress is updated by the academy.
         </p>
       </div>
 
@@ -220,7 +220,7 @@ export const StudentProgress: React.FC = () => {
                     
                     {activeModules.length === 0 ? (
                       <div className="p-4 rounded-xl bg-white/2 border border-white/5 text-xs text-slate-500 italic text-center font-sans">
-                        Modules will appear once your instructor publishes the syllabus.
+                        Modules will appear once the syllabus is published.
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

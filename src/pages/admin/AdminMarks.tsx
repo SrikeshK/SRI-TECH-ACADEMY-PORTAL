@@ -49,7 +49,7 @@ export const AdminMarks: React.FC = () => {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
   // Dynamic Form states
-  const [formMarks, setFormMarks] = useState<Record<string, { theoryMarks: number; practicalMarks: number }>>({});
+  const [formMarks, setFormMarks] = useState<Record<string, { theoryMarks: string; practicalMarks: string }>>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -134,7 +134,7 @@ export const AdminMarks: React.FC = () => {
   const handleOpenEdit = (student: Student) => {
     setEditingStudent(student);
     const resultRecord = studentResults.find(r => r.student.id === student.id);
-    const initialMarksMap: Record<string, { theoryMarks: number; practicalMarks: number }> = {};
+    const initialMarksMap: Record<string, { theoryMarks: string; practicalMarks: string }> = {};
     
     // Auto-detect programming courses student is enrolled in
     const enrolledProgCourses = courses.filter(c => 
@@ -144,9 +144,11 @@ export const AdminMarks: React.FC = () => {
 
     enrolledProgCourses.forEach(course => {
       const match = resultRecord?.subjects.find((s: any) => s.courseId === course.id);
+      const t = match?.theoryMarks !== undefined ? match.theoryMarks : 0;
+      const p = match?.practicalMarks !== undefined ? match.practicalMarks : 0;
       initialMarksMap[course.id] = {
-        theoryMarks: match?.theoryMarks !== undefined ? match.theoryMarks : 0,
-        practicalMarks: match?.practicalMarks !== undefined ? match.practicalMarks : 0
+        theoryMarks: t > 0 ? String(t) : '',
+        practicalMarks: p > 0 ? String(p) : ''
       };
     });
 
@@ -159,7 +161,15 @@ export const AdminMarks: React.FC = () => {
     if (!editingStudent) return;
     setSaving(true);
     try {
-      await marksCalculationService.updateStudentMarks(editingStudent.id, formMarks);
+      // Convert string form values to numeric values for saving
+      const numericMarks: Record<string, { theoryMarks: number; practicalMarks: number }> = {};
+      Object.entries(formMarks).forEach(([courseId, vals]) => {
+        numericMarks[courseId] = {
+          theoryMarks: vals.theoryMarks === '' ? 0 : Math.min(100, Math.max(0, Number(vals.theoryMarks))),
+          practicalMarks: vals.practicalMarks === '' ? 0 : Math.min(100, Math.max(0, Number(vals.practicalMarks)))
+        };
+      });
+      await marksCalculationService.updateStudentMarks(editingStudent.id, numericMarks);
       // Dispatch update event to alert any open dashboards
       window.dispatchEvent(new Event('sri_tech_db_updated'));
       setIsEditModalOpen(false);
@@ -534,9 +544,11 @@ export const AdminMarks: React.FC = () => {
                   (editingStudent.courseIds?.includes(c.id) || editingStudent.enrolledCourses?.includes(c.id))
                 )
                 .map(course => {
-                  const theory = formMarks[course.id]?.theoryMarks ?? 0;
-                  const practical = formMarks[course.id]?.practicalMarks ?? 0;
-                  
+                  const theoryStr = formMarks[course.id]?.theoryMarks ?? '';
+                  const practicalStr = formMarks[course.id]?.practicalMarks ?? '';
+                  const theory = theoryStr === '' ? 0 : Number(theoryStr);
+                  const practical = practicalStr === '' ? 0 : Number(practicalStr);
+                   
                   // Calculate dynamic average inside UI instantly using calculations service
                   const average = marksCalculationService.calculateLanguageAverage(theory, practical);
                   const grade = marksCalculationService.calculateGrade(average);
@@ -567,20 +579,19 @@ export const AdminMarks: React.FC = () => {
                             Theory Score (100)
                           </label>
                           <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            required
-                            value={theory}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            placeholder="0"
+                            value={theoryStr}
                             onChange={(e) => {
-                              const val = Math.min(100, Math.max(0, Number(e.target.value)));
-                              setFormMarks(prev => ({
-                                ...prev,
-                                [course.id]: {
-                                  ...prev[course.id],
-                                  theoryMarks: val
-                                }
-                              }));
+                              const raw = e.target.value.replace(/[^0-9]/g, '');
+                              if (raw === '') {
+                                setFormMarks(prev => ({ ...prev, [course.id]: { ...prev[course.id], theoryMarks: '' } }));
+                              } else {
+                                const num = Math.min(100, Number(raw));
+                                setFormMarks(prev => ({ ...prev, [course.id]: { ...prev[course.id], theoryMarks: String(num) } }));
+                              }
                             }}
                             className="w-full bg-slate-900/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-gold/50 transition-all font-semibold font-mono"
                           />
@@ -591,20 +602,19 @@ export const AdminMarks: React.FC = () => {
                             Practical Score (100)
                           </label>
                           <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            required
-                            value={practical}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            placeholder="0"
+                            value={practicalStr}
                             onChange={(e) => {
-                              const val = Math.min(100, Math.max(0, Number(e.target.value)));
-                              setFormMarks(prev => ({
-                                ...prev,
-                                [course.id]: {
-                                  ...prev[course.id],
-                                  practicalMarks: val
-                                }
-                              }));
+                              const raw = e.target.value.replace(/[^0-9]/g, '');
+                              if (raw === '') {
+                                setFormMarks(prev => ({ ...prev, [course.id]: { ...prev[course.id], practicalMarks: '' } }));
+                              } else {
+                                const num = Math.min(100, Number(raw));
+                                setFormMarks(prev => ({ ...prev, [course.id]: { ...prev[course.id], practicalMarks: String(num) } }));
+                              }
                             }}
                             className="w-full bg-slate-900/60 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-gold/50 transition-all font-semibold font-mono"
                           />

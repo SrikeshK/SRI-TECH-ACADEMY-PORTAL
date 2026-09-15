@@ -33,6 +33,10 @@ export interface AdminUser {
 
 // ------ Student ------
 
+export type ClassSchedule = 'weekday' | 'weekend' | 'not_set';
+export type CourseProgressStatus = 'COMPLETED' | 'CURRENT' | 'UPCOMING';
+export type StudentOverallStatus = 'CURRENT' | 'COMPLETED';
+
 export interface Student {
   id: string;
   name: string;
@@ -43,12 +47,35 @@ export interface Student {
   // Registration / Roll
   registerNumber?: string;
   rollNo?: string;
-  // Enrollment
+  // Enrollment & Schedule
   batch?: string;
+  classSchedule?: ClassSchedule;
   courseIds: string[];      // Primary: used by mockDb (new courses format)
   enrolledCourses?: string[]; // Alias kept for backward compat
   status: 'Active' | 'Inactive';
   createdAt?: string;
+}
+
+export interface StudentCourseProgressionItem {
+  courseId: string;
+  courseName: string;
+  courseCode?: string;
+  status: CourseProgressStatus;
+  averageMarks?: number;
+  grade?: string;
+  isGraded: boolean;
+}
+
+export interface StudentAcademicProgression {
+  studentId: string;
+  studentName: string;
+  registerNumber: string;
+  classSchedule: ClassSchedule;
+  enrolledCourses: StudentCourseProgressionItem[];
+  currentCourse: StudentCourseProgressionItem | null;
+  overallStatus: StudentOverallStatus;
+  completedCoursesCount: number;
+  totalEnrolledCount: number;
 }
 
 // ------ Course ------

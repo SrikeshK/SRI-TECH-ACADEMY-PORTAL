@@ -1,14 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { subscribeToAllCourses, courseProgressService } from '../../services';
-import { Course, Student, StudentProgress as StudentProgressType } from '../../types';
+import {
+  subscribeToAllCourses,
+  subscribeToStudentMarks,
+  courseProgressService
+} from '../../services';
+import { Course, Student, StudentProgress as StudentProgressType, Mark } from '../../types';
+import {
+  sortEnrolledCoursesByPriority,
+  computeStudentAcademicProgression
+} from '../../utils/courseProgression';
 import PageWrapper from '../../components/ui/PageWrapper';
 import GlassCard from '../../components/ui/GlassCard';
 import Skeleton from '../../components/ui/Skeleton';
 import Badge from '../../components/ui/Badge';
-import { Sparkles, CheckCircle2, Circle, ChevronDown, ChevronUp, BookOpen, Calendar } from 'lucide-react';
+import CourseProgressionBar from '../../components/ui/CourseProgressionBar';
+import { Sparkles, CheckCircle2, Circle, ChevronDown, ChevronUp, BookOpen, Clock, Award } from 'lucide-react';
 
 // Enterprise style helper matching requested colors (Gold, Blue, Emerald, Slate)
 const getCourseTheme = (courseName: string, index: number) => {
@@ -30,11 +39,11 @@ const getCourseTheme = (courseName: string, index: number) => {
 export const StudentProgress: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
-  const [enrolledCourseIds, setEnrolledCourseIds] = useState<string[]>([]);
+  const [studentData, setStudentData] = useState<Student | null>(null);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [progressList, setProgressList] = useState<StudentProgressType[]>([]);
+  const [studentMarks, setStudentMarks] = useState<Mark[]>([]);
+  const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.studentId) {
@@ -43,17 +52,22 @@ export const StudentProgress: React.FC = () => {
     }
 
     setLoading(true);
+    let ready = { student: false, courses: false, marks: false, progress: false };
+    const checkReady = () => {
+      if (Object.values(ready).every(Boolean)) setLoading(false);
+    };
 
-    // 1. Subscribe to student's own doc to get enrolledCourseIds in real-time
+    // 1. Subscribe to student profile doc in real-time
     const studentDocRef = doc(db, 'students', user.studentId);
     const unsubscribeStudent = onSnapshot(
       studentDocRef,
       (docSnap) => {
         if (docSnap.exists()) {
-          const studentData = docSnap.data() as Student;
-          const enrolledIds = studentData.courseIds || studentData.enrolledCourses || [];
-          setEnrolledCourseIds(enrolledIds);
+          const data = { id: docSnap.id, ...docSnap.data() } as Student;
+          setStudentData(data);
         }
+        ready.student = true;
+        checkReady();
       },
       (error) => {
         console.error('[StudentProgress] Error subscribing to student profile:', error);
@@ -63,28 +77,60 @@ export const StudentProgress: React.FC = () => {
     // 2. Subscribe to all courses in real-time
     const unsubscribeCourses = subscribeToAllCourses((coursesData) => {
       setAllCourses(coursesData);
+      ready.courses = true;
+      checkReady();
     });
 
-    // 3. Subscribe to all student progress records in real-time
+    // 3. Subscribe to marks in real-time to track course completions
+    const unsubscribeMarks = subscribeToStudentMarks(user.studentId, (marksData) => {
+      setStudentMarks(marksData);
+      ready.marks = true;
+      checkReady();
+    });
+
+    // 4. Subscribe to module progress records in real-time
     const unsubscribeProgress = courseProgressService.subscribeToAllStudentProgress(user.studentId, (list) => {
       setProgressList(list);
-      setLoading(false);
+      ready.progress = true;
+      checkReady();
     });
 
     return () => {
       unsubscribeStudent();
       unsubscribeCourses();
+      unsubscribeMarks();
       unsubscribeProgress();
     };
   }, [user]);
 
+  // Compute academic progression according to fixed course priority (C -> C++ -> Python -> Java)
+  const progression = useMemo(() => {
+    if (!studentData) return null;
+    return computeStudentAcademicProgression(studentData, allCourses, studentMarks);
+  }, [studentData, allCourses, studentMarks]);
+
+  // Enrolled courses sorted strictly by academy progression priority
+  const enrolledSortedCourses = useMemo(() => {
+    if (!studentData) return [];
+    const enrolledIds = studentData.courseIds?.length
+      ? studentData.courseIds
+      : (studentData.enrolledCourses ?? []);
+    const matching = allCourses.filter(c => enrolledIds.includes(c.id));
+    return sortEnrolledCoursesByPriority(matching);
+  }, [studentData, allCourses]);
+
+  // Set default expanded course
   useEffect(() => {
-    const enrolled = allCourses.filter(c => enrolledCourseIds.includes(c.id));
-    setCourses(enrolled);
-    if (enrolled.length > 0 && !expandedCourse) {
-      setExpandedCourse(enrolled[0].id);
+    if (enrolledSortedCourses.length > 0 && !expandedCourse) {
+      // Default expand current course if available, or first course
+      const current = progression?.currentCourse;
+      if (current) {
+        setExpandedCourse(current.courseId);
+      } else {
+        setExpandedCourse(enrolledSortedCourses[0].id);
+      }
     }
-  }, [allCourses, enrolledCourseIds]);
+  }, [enrolledSortedCourses, progression, expandedCourse]);
 
   const toggleCourse = (courseId: string) => {
     setExpandedCourse(expandedCourse === courseId ? null : courseId);
@@ -93,7 +139,7 @@ export const StudentProgress: React.FC = () => {
   if (loading) {
     return (
       <PageWrapper className="flex flex-col gap-6">
-        <Skeleton variant="rectangular" className="h-10 w-48 mb-4" />
+        <Skeleton variant="rectangular" className="h-28 w-full rounded-2xl" />
         <Skeleton variant="card" count={2} />
       </PageWrapper>
     );
@@ -101,29 +147,69 @@ export const StudentProgress: React.FC = () => {
 
   return (
     <PageWrapper className="flex-1 flex flex-col gap-6 lg:gap-8">
-      {/* Header Info */}
-      <div className="flex flex-col gap-2 border-b border-white/5 pb-4">
-        <div className="flex items-center gap-2 text-gold text-xs font-semibold uppercase tracking-wider">
-          <Sparkles className="h-4 w-4" />
-          <span>Academic Records</span>
-        </div>
-        <h2 className="text-xl md:text-2xl font-display font-extrabold text-white tracking-tight leading-none">
-          Course Syllabus Completion
-        </h2>
-        <p className="text-xs text-slate-400 font-sans">
-          View your course module status and checkmark completions. Syllabus progress is updated by the academy.
-        </p>
-      </div>
+      {/* ─── Hero Progression Header Card ─── */}
+      <GlassCard hoverable={false} className="bg-gradient-to-r from-deep-blue/40 via-black/40 to-slate-950/40 p-6 md:p-8 border border-white/5 relative overflow-hidden flex flex-col gap-5 rounded-2xl">
+        <div className="absolute right-0 top-0 w-80 h-80 bg-gold/5 rounded-full blur-[80px] pointer-events-none" />
 
-      {courses.length === 0 ? (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 z-10">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 text-gold text-xs font-semibold uppercase tracking-wider mb-1">
+              <Sparkles className="h-4 w-4 animate-pulse" />
+              <span>Academic Progression Hub</span>
+            </div>
+            <h2 className="text-xl md:text-2xl font-display font-extrabold text-white tracking-tight leading-none">
+              Course Progress & Progression Path
+            </h2>
+            <p className="text-xs text-slate-400 font-sans mt-1 max-w-xl">
+              Follow your prescribed academic path (C &rarr; C++ &rarr; Python &rarr; Java). Complete module assessments and marks to advance to your next subject.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 self-start md:self-auto">
+            {progression && (
+              <Badge
+                color={progression.overallStatus === 'COMPLETED' ? 'success' : 'gold'}
+                className="text-xs uppercase font-bold tracking-wider px-3 py-1.5"
+              >
+                {progression.overallStatus === 'COMPLETED' ? '✓ STATUS: COMPLETED' : '● STATUS: CURRENT'}
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Horizontal Progression Bar */}
+        {progression && progression.enrolledCourses.length > 0 && (
+          <div className="flex flex-col gap-2 z-10 border-t border-white/10 pt-4 mt-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <span className="text-[10px] font-display font-bold uppercase tracking-widest text-slate-400">
+                Your Enrolled Subject Progression Path
+              </span>
+              {progression.currentCourse ? (
+                <span className="text-xs font-semibold text-gold bg-gold/10 px-2.5 py-0.5 rounded border border-gold/20">
+                  Current Focus: {progression.currentCourse.courseName}
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/20">
+                  All Enrolled Courses Completed
+                </span>
+              )}
+            </div>
+
+            <CourseProgressionBar items={progression.enrolledCourses} />
+          </div>
+        )}
+      </GlassCard>
+
+      {/* ─── Detailed Courses List ─── */}
+      {enrolledSortedCourses.length === 0 ? (
         <GlassCard className="flex flex-col items-center justify-center p-16 text-center text-slate-400 border border-white/5 rounded-2xl">
           <BookOpen className="h-12 w-12 text-slate-600 mb-4" />
           <p className="text-base font-semibold text-slate-300">No active course enrollment found.</p>
-          <p className="text-xs text-slate-500 mt-1">Syllabus modules and progress will appear once you are enrolled in a cohort.</p>
+          <p className="text-xs text-slate-500 mt-1">Syllabus modules and progression will appear once you are enrolled in a cohort.</p>
         </GlassCard>
       ) : (
         <div className="flex flex-col gap-6">
-          {courses.map((course, idx) => {
+          {enrolledSortedCourses.map((course, idx) => {
             const isExpanded = expandedCourse === course.id;
             const activeModules = course.modules?.filter(m => m.isActive) || [];
             const progressRecord = progressList.find(p => p.courseId === course.id);
@@ -134,40 +220,41 @@ export const StudentProgress: React.FC = () => {
             const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
             const theme = getCourseTheme(course.name, idx);
 
-            // Status Check
-            let statusLabel = 'In Progress';
-            let badgeColor: 'success' | 'gold' | 'info' | 'default' = 'info';
-            if (totalCount === 0) {
-              statusLabel = 'Not Started';
-              badgeColor = 'default';
-            } else if (completedCount === 0) {
-              statusLabel = 'Not Started';
-              badgeColor = 'default';
-            } else if (completedCount === totalCount) {
-              statusLabel = 'Completed';
-              badgeColor = 'success';
-            } else {
-              statusLabel = 'In Progress';
-              badgeColor = 'gold';
-            }
+            // Match progression status for this course
+            const progItem = progression?.enrolledCourses.find(p => p.courseId === course.id);
+            const courseStatus = progItem?.status || 'UPCOMING';
 
             return (
               <GlassCard
                 key={course.id}
                 hoverable={false}
-                className="bg-slate-950/40 border border-white/5 p-6 flex flex-col gap-4 overflow-hidden rounded-2xl relative"
+                className="bg-slate-950/40 border border-white/5 p-6 flex flex-col gap-4 overflow-hidden rounded-2xl relative transition-all duration-300"
               >
                 {/* Course Header Banner */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex flex-col">
                     <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold font-display">
-                      {course.code || 'STA-COHORT'} &bull; Enrolled Course
+                      {course.code || 'STA-COHORT'} &bull; Step {idx + 1}
                     </span>
                     <h3 className="text-lg md:text-xl font-display font-extrabold text-white mt-1 flex items-center gap-3">
                       {course.name}
-                      <Badge color={badgeColor} className="text-[8px] uppercase tracking-wider font-bold">
-                        {statusLabel}
-                      </Badge>
+                      {/* Course Progression Status Badge */}
+                      {courseStatus === 'COMPLETED' && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Completed {progItem?.averageMarks !== undefined ? `(${progItem.averageMarks}%)` : ''}
+                        </span>
+                      )}
+                      {courseStatus === 'CURRENT' && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gold/15 border border-gold/30 text-gold font-mono animate-pulse">
+                          ● Current Focus
+                        </span>
+                      )}
+                      {courseStatus === 'UPCOMING' && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-900 border border-white/10 text-slate-400">
+                          ○ Upcoming
+                        </span>
+                      )}
                     </h3>
                   </div>
 

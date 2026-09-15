@@ -32,7 +32,8 @@ import {
   deleteCertificate,
   subscribeToCertificates,
   studentService,
-  courseService
+  courseService,
+  sortStudentsByRegisterNumber
 } from '../../services';
 
 // Helper to convert Google Drive URL to direct download URL
@@ -146,9 +147,10 @@ export const AdminCertificates: React.FC = () => {
           studentService.getAll(),
           courseService.getAll()
         ]);
-        setStudents(studentsData);
+        const sortedStudents = sortStudentsByRegisterNumber(studentsData);
+        setStudents(sortedStudents);
         setCourses(coursesData);
-        if (studentsData.length > 0) setFormStudentId(studentsData[0].id);
+        if (sortedStudents.length > 0) setFormStudentId(sortedStudents[0].id);
       } catch (err: any) {
         console.error('Failed to load students/courses metadata:', err);
         setError('Failed to load metadata: ' + err.message);
@@ -663,7 +665,7 @@ export const AdminCertificates: React.FC = () => {
               >
                 {students.map(s => (
                   <option key={s.id} value={s.id}>
-                    {s.name} ({s.rollNo || s.registerNumber})
+                    {s.name} ({s.registerNumber || s.rollNo || 'No Reg No'})
                   </option>
                 ))}
               </select>

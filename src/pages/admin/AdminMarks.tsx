@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { studentService, courseService, marksService, marksCalculationService } from '../../services';
+import {
+  studentService,
+  courseService,
+  marksService,
+  marksCalculationService,
+  sortStudentsByRegisterNumber,
+  compareRegisterNumbers
+} from '../../services';
 import { Student, Course, Mark } from '../../types';
 import PageWrapper from '../../components/ui/PageWrapper';
 import GlassCard from '../../components/ui/GlassCard';
@@ -30,12 +37,12 @@ export const AdminMarks: React.FC = () => {
   const [studentResults, setStudentResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Search, Filters & Sorting
+  // Search, Filters & Sorting - Default to register number ascending
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('all');
   const [selectedGrade, setSelectedGrade] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [sortBy, setSortBy] = useState<'name' | 'average'>('name');
+  const [sortBy, setSortBy] = useState<'registerNumber' | 'name' | 'average'>('registerNumber');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Pagination states
@@ -62,12 +69,13 @@ export const AdminMarks: React.FC = () => {
           studentService.getAll(),
           courseService.getAll()
         ]);
-        setStudents(studentsData);
+        const sortedStudents = sortStudentsByRegisterNumber(studentsData);
+        setStudents(sortedStudents);
         setCourses(coursesData);
 
         // Subscribe to marks real-time
         unsubscribeMarks = marksService.subscribeToMarks((marksData) => {
-          const results = studentsData.map((st) => {
+          const results = sortedStudents.map((st) => {
             const enrolledProgCourses = coursesData.filter(c => 
               c.category === 'Programming' && 
               (st.courseIds?.includes(c.id) || st.enrolledCourses?.includes(c.id))
@@ -186,7 +194,7 @@ export const AdminMarks: React.FC = () => {
     setIsReportModalOpen(true);
   };
 
-  const toggleSort = (type: 'name' | 'average') => {
+  const toggleSort = (type: 'registerNumber' | 'name' | 'average') => {
     if (sortBy === type) {
       setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
@@ -197,10 +205,12 @@ export const AdminMarks: React.FC = () => {
 
   // 1. Filter results
   const filteredResults = studentResults.filter(r => {
+    const q = searchQuery.toLowerCase().trim();
     // Search query
     const matchSearch =
-      r.student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (r.student.registerNumber || r.student.rollNo || '').toLowerCase().includes(searchQuery.toLowerCase());
+      !q ||
+      r.student.name.toLowerCase().includes(q) ||
+      (r.student.registerNumber || r.student.rollNo || '').toLowerCase().includes(q);
 
     // Language filter
     const matchLanguage =
@@ -216,20 +226,26 @@ export const AdminMarks: React.FC = () => {
     return matchSearch && matchLanguage && matchGrade && matchStatus;
   });
 
-  // 2. Sort results
+  // 2. Sort results - deterministic natural sort by register number
   const sortedResults = [...filteredResults].sort((a, b) => {
-    let valueA, valueB;
-    if (sortBy === 'name') {
-      valueA = a.student.name.toLowerCase();
-      valueB = b.student.name.toLowerCase();
+    if (sortBy === 'registerNumber') {
+      const regA = a.student.registerNumber || a.student.rollNo || '';
+      const regB = b.student.registerNumber || b.student.rollNo || '';
+      const comp = compareRegisterNumbers(regA, regB);
+      if (comp !== 0) return sortOrder === 'asc' ? comp : -comp;
+      return (a.student.name || '').localeCompare(b.student.name || '');
+    } else if (sortBy === 'name') {
+      const nameA = a.student.name.toLowerCase();
+      const nameB = b.student.name.toLowerCase();
+      const comp = nameA.localeCompare(nameB);
+      if (comp !== 0) return sortOrder === 'asc' ? comp : -comp;
+      return compareRegisterNumbers(a.student.registerNumber, b.student.registerNumber);
     } else {
-      valueA = a.overallAverage;
-      valueB = b.overallAverage;
+      const valA = a.overallAverage;
+      const valB = b.overallAverage;
+      if (valA !== valB) return sortOrder === 'asc' ? valA - valB : valB - valA;
+      return compareRegisterNumbers(a.student.registerNumber, b.student.registerNumber);
     }
-
-    if (valueA < valueB) return sortOrder === 'asc' ? -1 : 1;
-    if (valueA > valueB) return sortOrder === 'asc' ? 1 : -1;
-    return 0;
   });
 
   // 3. Paginate results
@@ -337,7 +353,14 @@ export const AdminMarks: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-white/5 bg-slate-900/30 text-[10px] text-slate-400 uppercase font-bold tracking-wider select-none">
-                  <th className="px-6 py-4">Student Info</th>
+                  <th className="px-6 py-4 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => toggleSort('registerNumber')}>
+                    <div className="flex items-center gap-1">
+                      Student Info
+                      {sortBy === 'registerNumber' && (
+                        <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
                   <th className="px-6 py-4">Programming Syllabus</th>
                   <th className="px-6 py-4 text-center cursor-pointer hover:bg-white/5 transition-colors" onClick={() => toggleSort('average')}>
                     <div className="flex items-center justify-center gap-1">

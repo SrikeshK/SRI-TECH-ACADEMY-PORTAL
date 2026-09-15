@@ -25,6 +25,7 @@ import {
 import { USE_FIREBASE_MATERIALS, USE_FIREBASE_CERTIFICATES } from '../services/config';
 import { materialService as firebaseMaterialService } from '../services/firebase/materialService';
 import { certificateService as firebaseCertificateService } from '../services/firebase/certificateService';
+import { sortStudentsByRegisterNumber } from '../utils/studentOrdering';
 
 // Environment variables configuration check
 const firebaseConfig = {
@@ -119,7 +120,7 @@ export const databaseService = {
   // --- Students ---
   async getStudents(): Promise<Student[]> {
     await new Promise(resolve => setTimeout(resolve, 400));
-    return mockDb.getStudents();
+    return sortStudentsByRegisterNumber(mockDb.getStudents());
   },
 
   async saveStudent(student: Student): Promise<Student> {

@@ -3,6 +3,7 @@ import { mockDb } from '../../firebase/mockDb';
 import { studentService as mockStudentService } from './studentService';
 import { studentService as firebaseStudentService } from '../firebase/studentService';
 import { USE_FIREBASE } from '../config';
+import { sortStudentsByRegisterNumber } from '../../utils/studentOrdering';
 
 const studentService = USE_FIREBASE ? firebaseStudentService : mockStudentService;
 
@@ -19,7 +20,8 @@ class MockCourseProgressService {
 
   async getCourseStudents(courseId: string): Promise<Student[]> {
     const students = await studentService.getAll();
-    return students.filter(s => s.courseIds?.includes(courseId) || s.enrolledCourses?.includes(courseId));
+    const enrolled = students.filter(s => s.courseIds?.includes(courseId) || s.enrolledCourses?.includes(courseId));
+    return sortStudentsByRegisterNumber(enrolled);
   }
 
   async updateModuleCompletion(
@@ -133,6 +135,14 @@ class MockCourseProgressService {
     const progressList = mockDb.getStudentProgress();
     const record = progressList.find(p => p.studentId === studentId && p.courseId === courseId) || null;
     callback(record);
+    return () => {};
+  }
+
+  subscribeToAllProgress(
+    callback: (progressList: StudentProgress[]) => void
+  ): () => void {
+    const progressList = mockDb.getStudentProgress();
+    callback(progressList);
     return () => {};
   }
 

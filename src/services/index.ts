@@ -43,8 +43,23 @@ import { Material, AcademyFeeRecord, Certificate } from '../types';
 
 export { USE_FIREBASE, USE_FIREBASE_COURSES, USE_FIREBASE_ATTENDANCE, USE_FIREBASE_MARKS, USE_FIREBASE_MATERIALS, USE_FIREBASE_FEES, USE_FIREBASE_ANALYTICS, USE_FIREBASE_CERTIFICATES };
 
+// ─── Student Ordering Utilities ───
+export {
+  compareRegisterNumbers,
+  sortStudentsByRegisterNumber,
+  sortStudentRowsByRegisterNumber,
+} from '../utils/studentOrdering';
+
 // ─── Students (Phase 2 – Firebase) ───
 export const studentService = USE_FIREBASE ? firebaseStudentService : mockStudentService;
+export {
+  getAllStudents,
+  getStudentById,
+  createStudent,
+  updateStudent,
+  deleteStudent,
+  subscribeToStudents,
+} from './firebase/studentService';
 
 // ─── Courses (Phase 3 – Firebase) ───
 export const courseService = USE_FIREBASE_COURSES ? firebaseCourseService : mockCourseService;

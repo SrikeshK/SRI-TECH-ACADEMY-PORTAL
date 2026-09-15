@@ -15,7 +15,13 @@ import {
   Filter
 } from 'lucide-react';
 import { Student, Course, Attendance } from '../../types';
-import { studentService, courseService, attendanceService, subscribeToAttendance } from '../../services';
+import {
+  studentService,
+  courseService,
+  attendanceService,
+  subscribeToAttendance,
+  sortStudentsByRegisterNumber
+} from '../../services';
 import PageWrapper from '../../components/ui/PageWrapper';
 import PageHeader from '../../components/ui/PageHeader';
 import GlassCard from '../../components/ui/GlassCard';
@@ -58,7 +64,7 @@ const AdminAttendance: React.FC = () => {
           studentService.getAll(),
           courseService.getAll(),
         ]);
-        setStudents(studentsData);
+        setStudents(sortStudentsByRegisterNumber(studentsData));
         setCourses(coursesData);
         if (coursesData.length > 0) {
           setSelectedCourseId(coursesData[0].id);
@@ -98,26 +104,28 @@ const AdminAttendance: React.FC = () => {
   const courseFilteredStudents = useMemo(() => {
     const active = students.filter(s => s.status === 'Active');
     if (!selectedCourseId) return [];
-    if (selectedCourseId === 'all') return active;
-    return active.filter(
+    if (selectedCourseId === 'all') return sortStudentsByRegisterNumber(active);
+    const filtered = active.filter(
       s => s.enrolledCourses?.includes(selectedCourseId) || s.courseIds?.includes(selectedCourseId)
     );
+    return sortStudentsByRegisterNumber(filtered);
   }, [students, selectedCourseId]);
 
   const visibleStudents = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    return courseFilteredStudents.filter(s => {
+    const result = courseFilteredStudents.filter(s => {
+      const reg = (s.registerNumber || s.rollNo || '').toLowerCase();
       const matchesSearch =
         !q ||
         s.name.toLowerCase().includes(q) ||
-        (s.registerNumber || '').toLowerCase().includes(q) ||
-        (s.rollNo || '').toLowerCase().includes(q);
+        reg.includes(q);
 
       const status = getStudentStatus(s.id);
       const matchesStatus = statusFilter === 'All' || status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
+    return sortStudentsByRegisterNumber(result);
   }, [courseFilteredStudents, searchQuery, statusFilter, attendanceRecords, selectedDate, selectedCourseId, activeTab]);
 
   /* ─── Attendance helpers ──────────────────────────────────── */

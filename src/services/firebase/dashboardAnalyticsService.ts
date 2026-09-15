@@ -5,6 +5,7 @@
 
 import { collection, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { sortStudentsByRegisterNumber } from '../../utils/studentOrdering';
 
 // ────────────────────────────────────────────────────────────
 // TYPES
@@ -57,8 +58,6 @@ export interface DashboardInsights {
   activeStudents: number;
   averageProgress: number;
   topPerformingStudent: string;
-  highestAttendanceCourse?: string;
-  lowestAttendanceCourse?: string;
   highestPerformingCourse?: string;
   highestRevenueCourse?: string;
   studentsAwaitingPaymentCount?: number;
@@ -80,7 +79,6 @@ export interface DashboardData {
 class FirebaseDashboardAnalyticsService {
   private students: any[] = [];
   private courses: any[] = [];
-  private attendance: any[] = [];
   private marks: any[] = [];
   private materials: any[] = [];
   private fees: any[] = [];
@@ -97,7 +95,6 @@ class FirebaseDashboardAnalyticsService {
     const [
       studentsSnap,
       coursesSnap,
-      attendanceSnap,
       marksSnap,
       materialsSnap,
       feesSnap,
@@ -105,16 +102,14 @@ class FirebaseDashboardAnalyticsService {
     ] = await Promise.all([
       getDocs(collection(db, 'students')),
       getDocs(collection(db, 'courses')),
-      getDocs(collection(db, 'attendance')),
       getDocs(collection(db, 'marks')),
       getDocs(collection(db, 'materials')),
       getDocs(collection(db, 'fees')),
       getDocs(collection(db, 'certificates')).catch(() => ({ docs: [] }) as any)
     ]);
 
-    this.students = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    this.students = sortStudentsByRegisterNumber(studentsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
     this.courses = coursesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    this.attendance = attendanceSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     this.marks = marksSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     this.materials = materialsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     this.fees = feesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -149,7 +144,8 @@ class FirebaseDashboardAnalyticsService {
     this.cleanupListeners();
 
     const onCollectionUpdate = (key: string, docs: any[]) => {
-      (this as any)[key] = docs;
+      const processedDocs = key === 'students' ? sortStudentsByRegisterNumber(docs) : docs;
+      (this as any)[key] = processedDocs;
       this.isLoaded = true;
       if (this.listeners.size > 0) {
         const computed = this.calculateAll();
@@ -157,7 +153,7 @@ class FirebaseDashboardAnalyticsService {
       }
     };
 
-    const collections = ['students', 'courses', 'attendance', 'marks', 'materials', 'fees', 'certificates'];
+    const collections = ['students', 'courses', 'marks', 'materials', 'fees', 'certificates'];
 
     collections.forEach(colName => {
       const unsub = onSnapshot(
@@ -295,39 +291,7 @@ class FirebaseDashboardAnalyticsService {
       .slice(0, 8);
   }
 
-  // ─── Section 4: Attendance Analytics ───
-  getAttendanceAnalytics() {
-    const totalRecords = this.attendance.length;
-    const presentCount = this.attendance.filter(r => r.status === 'Present').length;
-    const lateCount = this.attendance.filter(r => r.status === 'Late').length;
-    const absentCount = this.attendance.filter(r => r.status === 'Absent').length;
-    const leaveCount = this.attendance.filter(r => r.status === 'Leave').length;
-
-    const overallAttendancePercentage = totalRecords > 0
-      ? Math.round(((presentCount + lateCount) / totalRecords) * 100)
-      : 0;
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayRecords = this.attendance.filter(r => r.date === todayStr);
-
-    const presentToday = todayRecords.filter(r => r.status === 'Present').length;
-    const absentToday = todayRecords.filter(r => r.status === 'Absent').length;
-    const lateToday = todayRecords.filter(r => r.status === 'Late').length;
-    const leaveToday = todayRecords.filter(r => r.status === 'Leave').length;
-
-    return {
-      overallAttendancePercentage,
-      presentToday,
-      absentToday,
-      lateToday,
-      leaveToday,
-      presentCount,
-      lateCount,
-      absentCount,
-      leaveCount,
-      totalRecords
-    };
-  }
+  // ─── Section 4: Academic Performance (Marks) ───
 
   // ─── Section 5: Academic Performance (Marks) ───
   getMarksAnalytics() {
@@ -463,40 +427,6 @@ class FirebaseDashboardAnalyticsService {
     const mostPopularCombination = combos[0]?.combination ?? 'N/A';
     const mostPopularCombinationStudents = combos[0]?.studentCount ?? 0;
 
-    // Highest/Lowest Attendance Course
-    const attByCourse: Record<string, { total: number; present: number }> = {};
-    this.attendance.forEach(r => {
-      if (!r.courseId) return;
-      if (!attByCourse[r.courseId]) {
-        attByCourse[r.courseId] = { total: 0, present: 0 };
-      }
-      attByCourse[r.courseId].total++;
-      if (r.status === 'Present' || r.status === 'Late') {
-        attByCourse[r.courseId].present++;
-      }
-    });
-
-    const courseNameMap: Record<string, string> = {};
-    this.courses.forEach(c => { courseNameMap[c.id] = c.name; });
-
-    let highestAttendanceCourse = 'N/A';
-    let highestAttendancePct = -1;
-    let lowestAttendanceCourse = 'N/A';
-    let lowestAttendancePct = 101;
-
-    Object.entries(attByCourse).forEach(([courseId, counts]) => {
-      const pct = (counts.present / counts.total) * 100;
-      const name = courseNameMap[courseId] || courseId;
-      if (pct > highestAttendancePct) {
-        highestAttendancePct = pct;
-        highestAttendanceCourse = name;
-      }
-      if (pct < lowestAttendancePct) {
-        lowestAttendancePct = pct;
-        lowestAttendanceCourse = name;
-      }
-    });
-
     // Highest Performing Course (by average marks)
     const marksByCourse: Record<string, { sum: number; count: number }> = {};
     this.marks.forEach(m => {
@@ -509,6 +439,9 @@ class FirebaseDashboardAnalyticsService {
       marksByCourse[m.courseId].sum += (theory + practical) / 2;
       marksByCourse[m.courseId].count++;
     });
+
+    const courseNameMap: Record<string, string> = {};
+    this.courses.forEach(c => { courseNameMap[c.id] = c.name; });
 
     let highestPerformingCourse = 'N/A';
     let highestScore = -1;
@@ -559,8 +492,6 @@ class FirebaseDashboardAnalyticsService {
       activeStudents: stats.activeStudents,
       averageProgress: progress.averagePercentage,
       topPerformingStudent,
-      highestAttendanceCourse,
-      lowestAttendanceCourse,
       highestPerformingCourse,
       highestRevenueCourse,
       studentsAwaitingPaymentCount

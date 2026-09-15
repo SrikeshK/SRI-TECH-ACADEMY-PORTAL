@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '../../firebase/config';
+import { sortStudentsByRegisterNumber } from '../../utils/studentOrdering';
 
 const COLLECTION_NAME = 'students';
 
@@ -19,10 +20,11 @@ const COLLECTION_NAME = 'students';
 export async function getAllStudents(): Promise<Student[]> {
   const colRef = collection(db, COLLECTION_NAME);
   const snapshot = await getDocs(colRef);
-  return snapshot.docs.map(doc => ({
+  const students = snapshot.docs.map(doc => ({
     ...(doc.data() as Omit<Student, 'id'>),
     id: doc.id
   } as Student));
+  return sortStudentsByRegisterNumber(students);
 }
 
 export async function getStudentById(id: string): Promise<Student | null> {
@@ -101,7 +103,7 @@ export function subscribeToStudents(callback: (students: Student[]) => void): ()
       ...(doc.data() as Omit<Student, 'id'>),
       id: doc.id
     } as Student));
-    callback(studentsList);
+    callback(sortStudentsByRegisterNumber(studentsList));
   }, (error) => {
     console.error("Error in students real-time subscription:", error);
   });

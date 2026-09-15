@@ -23,12 +23,11 @@ const AUTO_LABELS: Record<string, string> = {
   students: 'Students',
   courses: 'Courses',
   materials: 'Materials',
-  attendance: 'Attendance',
   marks: 'Marks',
   certificates: 'Certificates',
   fees: 'Fees',
   settings: 'Settings',
-  progress: 'Progress',
+  progress: 'Student Progress',
   results: 'Results',
   profile: 'Profile',
 };

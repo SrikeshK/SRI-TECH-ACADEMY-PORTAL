@@ -12,7 +12,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 import { Course, Student, StudentProgress } from '../../../types';
-import { studentService, courseProgressService } from '../../../services';
+import { studentService, courseProgressService, sortStudentsByRegisterNumber } from '../../../services';
 import Button from '../../ui/Button';
 import GlassCard from '../../ui/GlassCard';
 import Badge from '../../ui/Badge';
@@ -39,26 +39,38 @@ const CourseDetails: React.FC<CourseDetailsProps> = ({ course, initialTab = 'ove
   }, [initialTab, course.id]);
 
   useEffect(() => {
+    let isMounted = true;
+    setStudents([]);
+    setProgressData([]);
+    setAnalytics(null);
+    setLoading(true);
+
     const fetchData = async () => {
-      setLoading(true);
       try {
         const allStudents = await studentService.getAll();
+        if (!isMounted) return;
         const enrolledStudents = allStudents.filter(s => s.enrolledCourses?.includes(course.id) || s.courseIds?.includes(course.id));
-        setStudents(enrolledStudents);
+        setStudents(sortStudentsByRegisterNumber(enrolledStudents));
 
         const progress = await courseProgressService.getAllStudentProgressForCourse(course.id);
+        if (!isMounted) return;
         setProgressData(progress);
 
         const stats = await courseProgressService.getCourseAnalytics(course.id);
+        if (!isMounted) return;
         setAnalytics(stats);
       } catch (err) {
         console.error('Error fetching course details:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [course.id]);
 
   const handleToggleModule = async (studentId: string, moduleId: string, completed: boolean) => {

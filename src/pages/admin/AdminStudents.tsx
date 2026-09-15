@@ -16,15 +16,15 @@ import {
 import {
   studentService,
   courseService,
-  attendanceService,
   marksService,
   feeService,
-  certificateService
+  certificateService,
+  sortStudentsByRegisterNumber
 } from '../../services';
 import { createStudentAccount } from '../../services/firebaseAuthService';
 
 // Types
-import { Student, Course, Attendance, Mark, Fee, Certificate } from '../../types';
+import { Student, Course, Mark, Fee, Certificate } from '../../types';
 
 // Components
 import PageWrapper from '../../components/ui/PageWrapper';
@@ -57,7 +57,6 @@ const AdminStudents: React.FC = () => {
   const [modalLoading, setModalLoading] = useState(false);
 
   // Extra Data for View Mode
-  const [studentAttendance, setStudentAttendance] = useState<Attendance[]>([]);
   const [studentMarks, setStudentMarks] = useState<Mark[]>([]);
   const [studentFees, setStudentFees] = useState<Fee | null>(null);
   const [studentCertificates, setStudentCertificates] = useState<Certificate[]>([]);
@@ -86,7 +85,7 @@ const AdminStudents: React.FC = () => {
     setLoading(true);
     try {
       const studentsData = await studentService.getAll();
-      setStudents(studentsData);
+      setStudents(sortStudentsByRegisterNumber(studentsData));
     } catch (error) {
       showToast('Failed to fetch students data', 'error');
     } finally {
@@ -102,7 +101,7 @@ const AdminStudents: React.FC = () => {
 
     if (studentService.onSnapshot) {
       unsubscribe = studentService.onSnapshot((studentsData) => {
-        setStudents(studentsData);
+        setStudents(sortStudentsByRegisterNumber(studentsData));
         setLoading(false);
       });
     } else {
@@ -118,16 +117,20 @@ const AdminStudents: React.FC = () => {
 
   // Filtering Logic
   const filteredStudents = useMemo(() => {
-    return students.filter(student => {
+    const q = searchQuery.toLowerCase().trim();
+    const filtered = students.filter(student => {
+      const reg = (student.registerNumber || student.rollNo || '').toLowerCase();
       const matchesSearch =
-        student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.registerNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchQuery.toLowerCase());
+        !q ||
+        student.name.toLowerCase().includes(q) ||
+        reg.includes(q) ||
+        student.email.toLowerCase().includes(q);
 
       const matchesStatus = statusFilter === 'All' || student.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
+    return sortStudentsByRegisterNumber(filtered);
   }, [students, searchQuery, statusFilter]);
 
   // Pagination Logic
@@ -158,13 +161,11 @@ const AdminStudents: React.FC = () => {
     setModalMode('view');
     // Fetch related data
     try {
-      const [attendance, marks, fees, certificates] = await Promise.all([
-        attendanceService.getByStudentId(student.id),
+      const [marks, fees, certificates] = await Promise.all([
         marksService.getByStudentId(student.id),
         feeService.getByStudentId(student.id),
         certificateService.getByStudentId(student.id)
       ]);
-      setStudentAttendance(attendance);
       setStudentMarks(marks);
       setStudentFees(fees);
       setStudentCertificates(certificates);
@@ -371,7 +372,6 @@ const AdminStudents: React.FC = () => {
         mode={modalMode || 'view'}
         student={selectedStudent}
         courses={courses}
-        attendance={studentAttendance}
         marks={studentMarks}
         fees={studentFees}
         certificates={studentCertificates}

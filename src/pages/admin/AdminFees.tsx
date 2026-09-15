@@ -6,7 +6,15 @@ import {
   History, X, ChevronDown, BarChart3, Wallet, Percent
 } from 'lucide-react';
 import { Student, AcademyFeeRecord, PaymentEntry, DiscountType } from '../../types';
-import { studentService, feeService, feeCalculationService, USE_FIREBASE_FEES, subscribeToFees } from '../../services';
+import {
+  studentService,
+  feeService,
+  feeCalculationService,
+  USE_FIREBASE_FEES,
+  subscribeToFees,
+  sortStudentRowsByRegisterNumber,
+  sortStudentsByRegisterNumber
+} from '../../services';
 import { useAuth } from '../../context/AuthContext';
 import PageWrapper from '../../components/ui/PageWrapper';
 import PageHeader from '../../components/ui/PageHeader';
@@ -205,7 +213,7 @@ export const AdminFees: React.FC = () => {
         }
         newRows.push({ student, record });
       }
-      setRows(newRows);
+      setRows(sortStudentRowsByRegisterNumber(newRows));
     } catch (err) {
       console.error('Error loading fee data:', err);
     } finally {
@@ -254,7 +262,7 @@ export const AdminFees: React.FC = () => {
           }
 
           if (active) {
-            setRows(newRows);
+            setRows(sortStudentRowsByRegisterNumber(newRows));
             setLoading(false);
           }
         });
@@ -275,15 +283,17 @@ export const AdminFees: React.FC = () => {
 
   // ── Filtered rows ──────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    return rows.filter(({ student, record }) => {
-      const q = search.toLowerCase();
+    const q = search.toLowerCase().trim();
+    const result = rows.filter(({ student, record }) => {
       const matchSearch =
+        !q ||
         student.name.toLowerCase().includes(q) ||
         (student.registerNumber || student.rollNo || '').toLowerCase().includes(q);
       const matchStatus =
         statusFilter === 'All' || record.paymentStatus === statusFilter;
       return matchSearch && matchStatus;
     });
+    return sortStudentRowsByRegisterNumber(result);
   }, [rows, search, statusFilter]);
 
   // ── Statistics ─────────────────────────────────────────────────────────────

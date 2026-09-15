@@ -15,7 +15,6 @@ import {
   Clock,
   UserPlus,
   GraduationCap,
-  CalendarDays,
   FileText,
   CreditCard,
   BadgeCheck,
@@ -603,12 +602,11 @@ export const AdminDashboard: React.FC = () => {
   const quickActions: QuickActionProps[] = [
     { label: 'Add Student', icon: UserPlus, path: '/admin/students', color: '#60a5fa', glowColor: '#60a5fa' },
     { label: 'Manage Courses', icon: BookOpen, path: '/admin/courses', color: '#34d399', glowColor: '#34d399' },
-    { label: 'Mark Attendance', icon: CalendarDays, path: '/admin/attendance', color: '#f59e0b', glowColor: '#f59e0b' },
     { label: 'Upload Materials', icon: FileText, path: '/admin/materials', color: '#a78bfa', glowColor: '#a78bfa' },
     { label: 'Enter Marks', icon: GraduationCap, path: '/admin/marks', color: '#f472b6', glowColor: '#f472b6' },
     { label: 'Manage Fees', icon: CreditCard, path: '/admin/fees', color: '#fb923c', glowColor: '#fb923c' },
     { label: 'Issue Certificates', icon: BadgeCheck, path: '/admin/certificates', color: '#D4AF37', glowColor: '#D4AF37' },
-    { label: 'Settings', icon: Zap, path: '/admin/settings', color: '#38bdf8', glowColor: '#38bdf8' },
+    { label: 'Settings', icon: Zap, path: '/admin/settings', color: '#94a3b8', glowColor: '#94a3b8' },
   ];
 
   const insightItems: InsightCardProps[] = [
@@ -651,18 +649,6 @@ export const AdminDashboard: React.FC = () => {
       label: 'Top Performing Student',
       value: insights.topPerformingStudent,
       sub: 'Highest avg completion',
-    },
-    {
-      emoji: '📅',
-      label: 'Highest Attendance Course',
-      value: (insights as any).highestAttendanceCourse ?? 'N/A',
-      sub: 'Highest attendance rate',
-    },
-    {
-      emoji: '📉',
-      label: 'Lowest Attendance Course',
-      value: (insights as any).lowestAttendanceCourse ?? 'N/A',
-      sub: 'Lowest attendance rate',
     },
     {
       emoji: '🎓',
@@ -1000,7 +986,7 @@ export const AdminDashboard: React.FC = () => {
               subtitle="Navigate to key admin modules instantly"
               accent="#38bdf8"
             />
-            <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
               {quickActions.map((action, idx) => (
                 <QuickActionCard key={action.label} {...action} delay={idx * 0.05} />
               ))}

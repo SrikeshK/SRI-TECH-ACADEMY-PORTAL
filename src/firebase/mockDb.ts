@@ -1,5 +1,6 @@
 import { Student, Course, Material, Attendance, Mark, Certificate, Fee, UserProfile, StudentProgress, CourseModule, AcademyFeeRecord } from '../types';
 import { buildDefaultFeeRecord, recalculateFeeRecord } from '../services/mock/feeCalculationService';
+import { sortStudentsByRegisterNumber } from '../utils/studentOrdering';
 
 const STORAGE_KEY = 'sri_tech_academy_db_v3'; // Incremented key version to force refresh state
 
@@ -918,7 +919,7 @@ class MockDb {
 
   // --- Students ---
   getStudents(): Student[] {
-    return this.getDb().students;
+    return sortStudentsByRegisterNumber(this.getDb().students);
   }
 
   getStudent(id: string): Student | undefined {

@@ -41,7 +41,8 @@ const StudentTable: React.FC<StudentTableProps> = ({
     );
   }
 
-  const getCourseCount = (student: Student) => student.enrolledCourses.length;
+  const getCourseCount = (student: Student) =>
+    (student.enrolledCourses || student.courseIds || []).length;
 
   return (
     <div className="overflow-x-auto custom-scrollbar">
@@ -81,7 +82,7 @@ const StudentTable: React.FC<StudentTableProps> = ({
                       {student.name}
                     </span>
                     <span className="text-[10px] text-slate-500 font-mono mt-1 flex items-center gap-1">
-                      <Hash className="h-3 w-3" /> {student.registerNumber}
+                      <Hash className="h-3 w-3" /> {student.registerNumber || student.rollNo || 'N/A'}
                     </span>
                   </div>
                 </td>

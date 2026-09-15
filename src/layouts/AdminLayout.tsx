@@ -5,9 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard,
   Users,
+  TrendingUp,
   BookOpen,
   FileText,
-  CalendarDays,
   GraduationCap,
   Award,
   CreditCard,
@@ -20,9 +20,9 @@ import RouteTransition from '../components/ui/RouteTransition';
 const menuItems: MenuItem[] = [
   { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
   { name: 'Students', path: '/admin/students', icon: Users },
+  { name: 'Student Progress', path: '/admin/progress', icon: TrendingUp },
   { name: 'Courses', path: '/admin/courses', icon: BookOpen },
   { name: 'Materials', path: '/admin/materials', icon: FileText },
-  { name: 'Attendance', path: '/admin/attendance', icon: CalendarDays },
   { name: 'Marks', path: '/admin/marks', icon: GraduationCap },
   { name: 'Certificates', path: '/admin/certificates', icon: Award },
   { name: 'Fees', path: '/admin/fees', icon: CreditCard },

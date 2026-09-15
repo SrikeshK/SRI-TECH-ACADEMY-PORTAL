@@ -14,6 +14,7 @@ import { db } from '../../firebase/config';
 import { StudentProgress, Student } from '../../types';
 import { studentService } from './studentService';
 import { courseService } from './courseService';
+import { sortStudentsByRegisterNumber } from '../../utils/studentOrdering';
 
 const COLLECTION = 'studentProgress';
 
@@ -42,7 +43,8 @@ class FirebaseCourseProgressService {
 
   async getCourseStudents(courseId: string): Promise<Student[]> {
     const students = await studentService.getAll();
-    return students.filter(s => s.courseIds?.includes(courseId) || s.enrolledCourses?.includes(courseId));
+    const enrolled = students.filter(s => s.courseIds?.includes(courseId) || s.enrolledCourses?.includes(courseId));
+    return sortStudentsByRegisterNumber(enrolled);
   }
 
   async updateModuleCompletion(
@@ -173,6 +175,21 @@ class FirebaseCourseProgressService {
       }
     }, (error) => {
       console.error('[courseProgressService] subscribeToStudentProgress error:', error);
+    });
+  }
+
+  subscribeToAllProgress(
+    callback: (progressList: StudentProgress[]) => void
+  ): () => void {
+    const colRef = collection(db, COLLECTION);
+    return onSnapshot(colRef, (snapshot) => {
+      const list = snapshot.docs.map(docSnap => ({
+        ...(docSnap.data() as Omit<StudentProgress, 'id'>),
+        id: docSnap.id
+      } as StudentProgress));
+      callback(list);
+    }, (error) => {
+      console.error('[courseProgressService] subscribeToAllProgress error:', error);
     });
   }
 

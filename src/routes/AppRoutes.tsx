@@ -13,8 +13,8 @@ import LoginPage from '../pages/auth/LoginPage';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AdminStudents from '../pages/admin/AdminStudents';
 import AdminCourses from '../pages/admin/AdminCourses';
+import AdminStudentProgress from '../pages/admin/AdminStudentProgress';
 import AdminMaterials from '../pages/admin/AdminMaterials';
-import AdminAttendance from '../pages/admin/AdminAttendance';
 import AdminMarks from '../pages/admin/AdminMarks';
 import AdminCertificates from '../pages/admin/AdminCertificates';
 import AdminFees from '../pages/admin/AdminFees';
@@ -25,7 +25,6 @@ import StudentDashboard from '../pages/student/StudentDashboard';
 import StudentCourses from '../pages/student/StudentCourses';
 import StudentProgress from '../pages/student/StudentProgress';
 import StudentMaterials from '../pages/student/StudentMaterials';
-import StudentAttendance from '../pages/student/StudentAttendance';
 import StudentResults from '../pages/student/StudentResults';
 import StudentCertificates from '../pages/student/StudentCertificates';
 import StudentFees from '../pages/student/StudentFees';
@@ -96,9 +95,10 @@ const AppRoutes: React.FC = () => {
         <Route index element={<AdminDashboard />} />
         <Route path="dashboard" element={<Navigate to="/admin" replace />} />
         <Route path="students" element={<AdminStudents />} />
+        <Route path="progress" element={<AdminStudentProgress />} />
         <Route path="courses" element={<AdminCourses />} />
         <Route path="materials" element={<AdminMaterials />} />
-        <Route path="attendance" element={<AdminAttendance />} />
+        <Route path="attendance" element={<Navigate to="/admin" replace />} />
         <Route path="marks" element={<AdminMarks />} />
         <Route path="certificates" element={<AdminCertificates />} />
         <Route path="fees" element={<AdminFees />} />
@@ -119,7 +119,7 @@ const AppRoutes: React.FC = () => {
         <Route path="courses" element={<Navigate to="/student" replace />} />
         <Route path="progress" element={<StudentProgress />} />
         <Route path="materials" element={<StudentMaterials />} />
-        <Route path="attendance" element={<StudentAttendance />} />
+        <Route path="attendance" element={<Navigate to="/student" replace />} />
         <Route path="results" element={<StudentResults />} />
         <Route path="certificates" element={<StudentCertificates />} />
         <Route path="fees" element={<Navigate to="/student" replace />} />

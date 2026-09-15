@@ -1,10 +1,11 @@
 import { Student } from '../../types';
 import { mockDb } from '../../firebase/mockDb';
 import { IBaseService } from '../types';
+import { sortStudentsByRegisterNumber } from '../../utils/studentOrdering';
 
 class MockStudentService implements IBaseService<Student> {
   async getAll(): Promise<Student[]> {
-    return mockDb.getStudents();
+    return sortStudentsByRegisterNumber(mockDb.getStudents());
   }
 
   async getById(id: string): Promise<Student | null> {
@@ -32,9 +33,10 @@ class MockStudentService implements IBaseService<Student> {
   }
 
   onSnapshot(callback: (students: Student[]) => void): () => void {
-    callback(mockDb.getStudents());
+    callback(sortStudentsByRegisterNumber(mockDb.getStudents()));
     return () => {};
   }
 }
 
 export const studentService = new MockStudentService();
+

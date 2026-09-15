@@ -2,7 +2,7 @@ import React from 'react';
 import Modal from '../../ui/Modal';
 import StudentForm from './StudentForm';
 import StudentDetails from './StudentDetails';
-import { Student, Course, Attendance, Mark, Fee, Certificate } from '../../../types';
+import { Student, Course, Mark, Fee, Certificate } from '../../../types';
 import { AlertTriangle } from 'lucide-react';
 import Button from '../../ui/Button';
 
@@ -12,7 +12,6 @@ interface StudentModalProps {
   mode: 'add' | 'edit' | 'view' | 'delete';
   student: Student | null;
   courses: Course[];
-  attendance?: Attendance[];
   marks?: Mark[];
   fees?: Fee | null;
   certificates?: Certificate[];
@@ -27,7 +26,6 @@ const StudentModal: React.FC<StudentModalProps> = ({
   mode,
   student,
   courses,
-  attendance = [],
   marks = [],
   fees = null,
   certificates = [],
@@ -65,7 +63,6 @@ const StudentModal: React.FC<StudentModalProps> = ({
         <StudentDetails
           student={student}
           courses={courses}
-          attendance={attendance}
           marks={marks}
           fees={fees}
           certificates={certificates}

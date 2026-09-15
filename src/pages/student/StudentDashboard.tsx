@@ -4,7 +4,6 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import {
   subscribeToAllCourses,
-  subscribeToStudentAttendance,
   subscribeToStudentCertificates,
   courseProgressService,
 } from '../../services';
@@ -13,7 +12,7 @@ import PageWrapper from '../../components/ui/PageWrapper';
 import GlassCard from '../../components/ui/GlassCard';
 import Skeleton from '../../components/ui/Skeleton';
 import Badge from '../../components/ui/Badge';
-import { Sparkles, CalendarDays, BookOpen, Award, CheckCircle2, Circle } from 'lucide-react';
+import { Sparkles, BookOpen, Award, CheckCircle2, Circle } from 'lucide-react';
 
 // CountUp Animation Component for premium SaaS feel
 const CountUp: React.FC<{ end: number; duration?: number; suffix?: string }> = ({ end, duration = 800, suffix = '' }) => {
@@ -63,7 +62,6 @@ export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [studentCourses, setStudentCourses] = useState<Course[]>([]);
-  const [attendancePercent, setAttendancePercent] = useState(0);
   const [certificatesEarned, setCertificatesEarned] = useState(0);
   const [completedModules, setCompletedModules] = useState(0);
   const [pendingModules, setPendingModules] = useState(0);
@@ -108,7 +106,7 @@ export const StudentDashboard: React.FC = () => {
     }
 
     setLoading(true);
-    let readyFlags = { courses: false, attendance: false, certs: false, progress: false };
+    let readyFlags = { courses: false, certs: false, progress: false };
     const checkAllReady = () => {
       if (Object.values(readyFlags).every(Boolean)) setLoading(false);
     };
@@ -129,16 +127,7 @@ export const StudentDashboard: React.FC = () => {
       checkAllReady();
     });
 
-    // 3. Attendance (realtime)
-    const unsubAttendance = subscribeToStudentAttendance(user.studentId, (records) => {
-      const totalClasses = records.length;
-      const attended = records.filter(r => r.status === 'Present' || r.status === 'Late').length;
-      setAttendancePercent(totalClasses > 0 ? Math.round((attended / totalClasses) * 100) : 0);
-      readyFlags.attendance = true;
-      checkAllReady();
-    });
-
-    // 4. Certificates (realtime)
+    // 3. Certificates (realtime)
     const unsubCerts = subscribeToStudentCertificates(user.studentId, (certs) => {
       const earned = certs.filter(c => c.status === 'Approved' || c.status === 'Issued').length;
       setCertificatesEarned(earned);
@@ -146,7 +135,7 @@ export const StudentDashboard: React.FC = () => {
       checkAllReady();
     });
 
-    // 5. Course progress (realtime)
+    // 4. Course progress (realtime)
     const unsubProgress = courseProgressService.subscribeToAllStudentProgress(user.studentId, (list) => {
       setProgressList(list);
       readyFlags.progress = true;
@@ -156,7 +145,6 @@ export const StudentDashboard: React.FC = () => {
     return () => {
       unsubStudent();
       unsubCourses();
-      unsubAttendance();
       unsubCerts();
       unsubProgress();
     };
@@ -211,17 +199,17 @@ export const StudentDashboard: React.FC = () => {
 
       {/* ─── STATISTICS CARDS ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Attendance Rate */}
+        {/* Enrolled Courses */}
         <GlassCard className="bg-slate-950/40 p-6 flex items-center gap-5 border border-white/5 rounded-2xl hover:border-sky-500/30 transition-all duration-300">
           <div className="p-3 rounded-xl bg-sky-950/30 border border-sky-500/20 text-sky-400">
-            <CalendarDays className="h-6 w-6" />
+            <BookOpen className="h-6 w-6" />
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Attendance Rate</span>
+            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Enrolled Courses</span>
             <span className="text-2xl font-display font-extrabold text-white mt-0.5">
-              <CountUp end={attendancePercent} suffix="%" />
+              <CountUp end={studentCourses.length} />
             </span>
-            <span className="text-[9px] text-slate-500 mt-0.5">Classroom check-ins</span>
+            <span className="text-[9px] text-slate-500 mt-0.5">Active cohort subjects</span>
           </div>
         </GlassCard>
 

@@ -4,7 +4,6 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import {
   subscribeToAllCourses,
-  subscribeToStudentAttendance,
   subscribeToStudentCertificates,
   courseProgressService,
 } from '../../services';
@@ -23,7 +22,7 @@ import {
   Lock,
   BookOpen,
   Award,
-  CalendarCheck,
+  CheckCircle2,
   Activity,
   CheckCircle,
   KeyRound,
@@ -105,17 +104,27 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, suffix = '', co
   );
 };
 
-export const StudentProfile: React.FC = () => {
-  const { user, updateProfile, updatePassword } = useAuth();
-  const [studentDetails, setStudentDetails] = useState<Student | null>(null);
-  const [loading, setLoading] = useState(true);
+interface StudentProfileProps {
+  // Can be extended if passed externally
+}
 
-  // Form states
-  const [formName, setFormName] = useState(user?.name || '');
-  const [formPhone, setFormPhone] = useState(user?.phone || '');
+const itemFadeUpVariants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+};
+
+export const StudentProfile: React.FC<StudentProfileProps> = () => {
+  const { user, updateProfile, updatePassword } = useAuth();
+  
+  // Profile loading and form state
+  const [loading, setLoading] = useState(true);
   const [successMsg, setSuccessMsg] = useState(false);
 
-  // Change password states
+  const [studentDetails, setStudentDetails] = useState<Student | null>(null);
+  const [formName, setFormName] = useState(user?.name || '');
+  const [formPhone, setFormPhone] = useState(user?.phone || '');
+
+  // Password management state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -128,7 +137,7 @@ export const StudentProfile: React.FC = () => {
 
   // Metrics states
   const [enrolledCoursesCount, setEnrolledCoursesCount] = useState(0);
-  const [attendancePercent, setAttendancePercent] = useState(0);
+  const [completedModulesCount, setCompletedModulesCount] = useState(0);
   const [certificatesEarned, setCertificatesEarned] = useState(0);
   const [courseCompletionPercent, setCourseCompletionPercent] = useState(0);
 
@@ -149,6 +158,7 @@ export const StudentProfile: React.FC = () => {
       completedModCount += activeModules.filter(m => completedIds.includes(m.id)).length;
       totalModCount += activeModules.length;
     });
+    setCompletedModulesCount(completedModCount);
     setCourseCompletionPercent(totalModCount > 0 ? Math.round((completedModCount / totalModCount) * 100) : 0);
   }, [allCourses, enrolledCourseIds, progressList]);
 
@@ -159,7 +169,7 @@ export const StudentProfile: React.FC = () => {
     }
 
     setLoading(true);
-    let readyFlags = { courses: false, attendance: false, certs: false, progress: false };
+    let readyFlags = { courses: false, certs: false, progress: false };
     const checkAllReady = () => {
       if (Object.values(readyFlags).every(Boolean)) setLoading(false);
     };
@@ -185,16 +195,7 @@ export const StudentProfile: React.FC = () => {
       checkAllReady();
     });
 
-    // 3. Attendance realtime
-    const unsubAttendance = subscribeToStudentAttendance(user.studentId, (records) => {
-      const totalClasses = records.length;
-      const attended = records.filter(r => r.status === 'Present' || r.status === 'Late').length;
-      setAttendancePercent(totalClasses > 0 ? Math.round((attended / totalClasses) * 100) : 0);
-      readyFlags.attendance = true;
-      checkAllReady();
-    });
-
-    // 4. Certificates realtime
+    // 3. Certificates realtime
     const unsubCerts = subscribeToStudentCertificates(user.studentId, (certs) => {
       const earned = certs.filter(c => c.status === 'Approved' || c.status === 'Issued').length;
       setCertificatesEarned(earned);
@@ -202,7 +203,7 @@ export const StudentProfile: React.FC = () => {
       checkAllReady();
     });
 
-    // 5. Course progress realtime
+    // 4. Course progress realtime
     const unsubProgress = courseProgressService.subscribeToAllStudentProgress(user.studentId, (list) => {
       setProgressList(list);
       readyFlags.progress = true;
@@ -212,7 +213,6 @@ export const StudentProfile: React.FC = () => {
     return () => {
       unsubStudent();
       unsubCourses();
-      unsubAttendance();
       unsubCerts();
       unsubProgress();
     };
@@ -494,12 +494,11 @@ export const StudentProfile: React.FC = () => {
                   colorClass="text-gold"
                 />
 
-                {/* Attendance Rate */}
+                {/* Completed Modules */}
                 <StatCard
-                  title="Attendance"
-                  value={attendancePercent}
-                  suffix="%"
-                  icon={<CalendarCheck className="h-4 w-4" />}
+                  title="Completed Modules"
+                  value={completedModulesCount}
+                  icon={<CheckCircle2 className="h-4 w-4" />}
                   colorClass="text-emerald-400"
                 />
 

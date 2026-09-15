@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { BookOpen, Plus, Search, Filter } from 'lucide-react';
 import { Course, Student } from '../../types';
-import { courseService, studentService, courseProgressService, subscribeToAllCourses } from '../../services';
+import { courseService, studentService, courseProgressService, subscribeToAllCourses, sortStudentsByRegisterNumber } from '../../services';
 import PageWrapper from '../../components/ui/PageWrapper';
 import PageHeader from '../../components/ui/PageHeader';
 import Button from '../../components/ui/Button';
@@ -37,7 +37,7 @@ const AdminCourses: React.FC = () => {
   const fetchStudents = useCallback(async () => {
     try {
       const allStudents = await studentService.getAll();
-      setStudents(allStudents);
+      setStudents(sortStudentsByRegisterNumber(allStudents));
     } catch (err) {
       console.error('[AdminCourses] Error fetching students:', err);
     }
